@@ -1,8 +1,8 @@
 # openstreetmap-tile-server-cyclosm
 
-## Forked from [Overv/openstreetmap-tile-server](https://github.com/Overv/openstreetmap-tile-server)
+## Forked from [mhajder/openstreetmap-tile-server-cyclosm](https://github.com/mhajder/openstreetmap-tile-server-cyclosm)
 
-[![Build Status](https://github.com/mhajder/openstreetmap-tile-server-cyclosm/workflows/Docker/badge.svg)](https://github.com/mhajder/openstreetmap-tile-server-cyclosm/actions?query=workflow%3ADocker)
+[![Build Status](https://github.com/bencollinsuk/world-bike-map-tile-server-cyclosm/workflows/Docker/badge.svg)](https://github.com/bencollinsuk/world-bike-map-tile-server-cyclosm/actions?query=workflow%3ADocker)
 
 This container allows you to easily set up an OpenStreetMap PNG tile server given a `.osm.pbf` file. It is based on the [latest Ubuntu 18.04 LTS guide](https://switch2osm.org/manually-building-a-tile-server-18-04-lts/) from [switch2osm.org](https://switch2osm.org/) and therefore uses the [CyclOSM](https://github.com/cyclosm/cyclosm-cartocss-style) style.
 
@@ -21,7 +21,7 @@ docker run \
     --rm \
     -v /absolute/path/to/luxembourg.osm.pbf:/data.osm.pbf \
     -v openstreetmap-cyclosm-data:/var/lib/postgresql/12/main \
-    mhajder/openstreetmap-tile-server-cyclosm \
+    bencollinsuk/world-bike-map-tile-server-cyclosm \
     import
 ```
 
@@ -38,7 +38,7 @@ docker run \
     -v /absolute/path/to/luxembourg.osm.pbf:/data.osm.pbf \
     -v /absolute/path/to/luxembourg.poly:/data.poly \
     -v openstreetmap-cyclosm-data:/var/lib/postgresql/12/main \
-    mhajder/openstreetmap-tile-server-cyclosm \
+    bencollinsuk/world-bike-map-tile-server-cyclosm \
     import
 ```
 
@@ -54,7 +54,7 @@ docker run \
     -e DOWNLOAD_PBF=https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf \
     -e DOWNLOAD_POLY=https://download.geofabrik.de/europe/luxembourg.poly \
     -v openstreetmap-cyclosm-data:/var/lib/postgresql/12/main \
-    mhajder/openstreetmap-tile-server-cyclosm \
+    bencollinsuk/world-bike-map-tile-server-cyclosm \
     import
 ```
 
@@ -66,7 +66,7 @@ Run the server like this:
 docker run \
     -p 8080:80 \
     -v openstreetmap-cyclosm-data:/var/lib/postgresql/12/main \
-    -d mhajder/openstreetmap-tile-server-cyclosm \
+    -d bencollinsuk/world-bike-map-tile-server-cyclosm \
     run
 ```
 
@@ -86,7 +86,7 @@ docker run \
     -p 8080:80 \
     -v openstreetmap-cyclosm-data:/var/lib/postgresql/12/main \
     -v openstreetmap-cyclosm-rendered-tiles:/var/lib/mod_tile \
-    -d mhajder/openstreetmap-tile-server-cyclosm \
+    -d bencollinsuk/world-bike-map-tile-server-cyclosm \
     run
 ```
 
@@ -102,7 +102,7 @@ docker run \
     -e UPDATES=enabled \
     -v openstreetmap-cyclosm-data:/var/lib/postgresql/12/main \
     -v openstreetmap-cyclosm-rendered-tiles:/var/lib/mod_tile \
-    -d mhajder/openstreetmap-tile-server-cyclosm \
+    -d bencollinsuk/world-bike-map-tile-server-cyclosm \
     run
 ```
 
@@ -117,7 +117,7 @@ docker run \
     -p 8080:80 \
     -v openstreetmap-cyclosm-data:/var/lib/postgresql/12/main \
     -e ALLOW_CORS=enabled \
-    -d mhajder/openstreetmap-tile-server-cyclosm \
+    -d bencollinsuk/world-bike-map-tile-server-cyclosm \
     run
 ```
 
@@ -130,7 +130,7 @@ docker run \
     -p 8080:80 \
     -p 5432:5432 \
     -v openstreetmap-cyclosm-data:/var/lib/postgresql/12/main \
-    -d mhajder/openstreetmap-tile-server-cyclosm \
+    -d bencollinsuk/world-bike-map-tile-server-cyclosm \
     run
 ```
 
@@ -148,7 +148,7 @@ docker run \
     -p 5432:5432 \
     -e PGPASSWORD=secret \
     -v openstreetmap-cyclosm-data:/var/lib/postgresql/12/main \
-    -d mhajder/openstreetmap-tile-server-cyclosm \
+    -d bencollinsuk/world-bike-map-tile-server-cyclosm \
     run
 ```
 
@@ -165,7 +165,7 @@ docker run \
     -p 8080:80 \
     -e THREADS=24 \
     -v openstreetmap-cyclosm-data:/var/lib/postgresql/12/main \
-    -d mhajder/openstreetmap-tile-server-cyclosm \
+    -d bencollinsuk/world-bike-map-tile-server-cyclosm \
     run
 ```
 
@@ -178,7 +178,7 @@ docker run \
     -p 8080:80 \
     -e "OSM2PGSQL_EXTRA_ARGS=-C 4096" \
     -v openstreetmap-cyclosm-data:/var/lib/postgresql/12/main \
-    -d mhajder/openstreetmap-tile-server-cyclosm \
+    -d bencollinsuk/world-bike-map-tile-server-cyclosm \
     run
 ```
 
@@ -191,7 +191,7 @@ docker run \
     -p 8080:80 \
     -e AUTOVACUUM=off \
     -v openstreetmap-cyclosm-data:/var/lib/postgresql/12/main \
-    -d mhajder/openstreetmap-tile-server-cyclosm \
+    -d bencollinsuk/world-bike-map-tile-server-cyclosm \
     run
 ```
 
@@ -205,7 +205,7 @@ docker run \
     -v openstreetmap-cyclosm-nodes:/nodes \
     -v openstreetmap-cyclosm-data:/var/lib/postgresql/12/main \
     -e "OSM2PGSQL_EXTRA_ARGS=--flat-nodes /nodes/flat_nodes.bin" \
-    mhajder/openstreetmap-tile-server-cyclosm \
+    bencollinsuk/world-bike-map-tile-server-cyclosm \
     import
 ```
 
@@ -233,7 +233,7 @@ docker run \
     -p 8080:80 \
     -v openstreetmap-cyclosm-data:/var/lib/postgresql/12/main \
     --shm-size="192m" \
-    -d mhajder/openstreetmap-tile-server-cyclosm \
+    -d bencollinsuk/world-bike-map-tile-server-cyclosm \
     run
 ```
 

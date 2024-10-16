@@ -1,6 +1,6 @@
 .PHONY: build push test
 
-DOCKER_IMAGE=mhajder/openstreetmap-tile-server-cyclosm
+DOCKER_IMAGE=bencollinsuk/world-bike-map-tile-server-cyclosm
 
 build:
 	docker build -t ${DOCKER_IMAGE} .

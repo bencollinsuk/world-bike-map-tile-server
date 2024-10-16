@@ -2,7 +2,7 @@ version: '3'
 
 services:
   map:
-    image: mhajder/openstreetmap-tile-server-cyclosm
+    image: bencollinsuk/world-bike-map-tile-server-cyclosm
     volumes:
       - openstreetmap-data:/var/lib/postgresql/12/main
     ports:

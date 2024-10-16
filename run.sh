@@ -1,11 +1,11 @@
 #!/bin/bash
 
-set -x
+set -euo pipefail
 
 function createPostgresConfig() {
-  cp /etc/postgresql/12/main/postgresql.custom.conf.tmpl /etc/postgresql/12/main/conf.d/postgresql.custom.conf
-  sudo -u postgres echo "autovacuum = $AUTOVACUUM" >> /etc/postgresql/12/main/conf.d/postgresql.custom.conf
-  cat /etc/postgresql/12/main/conf.d/postgresql.custom.conf
+  cp /etc/postgresql/$PG_VERSION/main/postgresql.custom.conf.tmpl /etc/postgresql/$PG_VERSION/main/conf.d/postgresql.custom.conf
+  sudo -u postgres echo "autovacuum = $AUTOVACUUM" >> /etc/postgresql/$PG_VERSION/main/conf.d/postgresql.custom.conf
+  cat /etc/postgresql/$PG_VERSION/main/conf.d/postgresql.custom.conf
 }
 
 function setPostgresPassword() {
@@ -23,11 +23,13 @@ if [ "$#" -ne 1 ]; then
     exit 1
 fi
 
-if [ "$1" = "import" ]; then
+if [ "$1" == "import" ]; then
     # Ensure that database directory is in right state
-    chown postgres:postgres -R /var/lib/postgresql
-    if [ ! -f /var/lib/postgresql/12/main/PG_VERSION ]; then
-        sudo -u postgres /usr/lib/postgresql/12/bin/pg_ctl -D /var/lib/postgresql/12/main/ initdb -o "--locale C.UTF-8"
+    mkdir -p /data/database/postgres/
+    chown renderer: /data/database/
+    chown -R postgres: /var/lib/postgresql /data/database/postgres/
+    if [ ! -f /data/database/postgres/PG_VERSION ]; then
+        sudo -u postgres /usr/lib/postgresql/$PG_VERSION/bin/pg_ctl -D /data/database/postgres/ initdb -o "--locale C.UTF-8"
     fi
 
     # Initialize PostgreSQL
@@ -41,11 +43,9 @@ if [ "$1" = "import" ]; then
     sudo -u postgres psql -d gis -c "ALTER TABLE spatial_ref_sys OWNER TO renderer;"
     setPostgresPassword
 
-    # Download Luxembourg as sample if no data is provided
     if [ ! -f /data.osm.pbf ] && [ -z "$DOWNLOAD_PBF" ]; then
-        echo "WARNING: No import file at /data.osm.pbf, so importing Luxembourg as example..."
-        DOWNLOAD_PBF="https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf"
-        DOWNLOAD_POLY="https://download.geofabrik.de/europe/luxembourg.poly"
+        echo "ERROR: No import file"
+        exit 1
     fi
 
     if [ -n "$DOWNLOAD_PBF" ]; then
@@ -73,7 +73,10 @@ if [ "$1" = "import" ]; then
     fi
 
     # Import data
-    sudo -u renderer osm2pgsql -d gis --create --slim -G --hstore --number-processes ${THREADS:-4} ${OSM2PGSQL_EXTRA_ARGS} /data.osm.pbf
+    sudo -u renderer osm2pgsql -d gis --create --slim -G --hstore \
+        --number-processes ${THREADS:-4} \
+        ${OSM2PGSQL_EXTRA_ARGS} \
+        /data.osm.pbf
 
     # Create indexes
     sudo -u postgres psql -d gis -f indexes.sql
@@ -98,7 +101,7 @@ if [ "$1" = "run" ]; then
     rm -rf /tmp/*
 
     # Fix postgres data privileges
-    chown postgres:postgres /var/lib/postgresql -R
+    chown -R postgres: /var/lib/postgresql/ /data/database/postgres/
 
     # Configure Apache CORS
     if [ "$ALLOW_CORS" == "enabled" ] || [ "$ALLOW_CORS" == "1" ]; then
@@ -112,7 +115,7 @@ if [ "$1" = "run" ]; then
     setPostgresPassword
 
     # Configure renderd threads
-    sed -i -E "s/num_threads=[0-9]+/num_threads=${THREADS:-4}/g" /usr/local/etc/renderd.conf
+    sed -i -E "s/num_threads=[0-9]+/num_threads=${THREADS:-4}/g" /etc/renderd.conf
 
     # start cron job to trigger consecutive updates
     if [ "$UPDATES" = "enabled" ] || [ "$UPDATES" = "1" ]; then
@@ -125,7 +128,7 @@ if [ "$1" = "run" ]; then
     }
     trap stop_handler SIGTERM
 
-    sudo -u renderer renderd -f -c /usr/local/etc/renderd.conf &
+    sudo -u renderer renderd -f -c /etc/renderd.conf &
     child=$!
     wait "$child"
 
