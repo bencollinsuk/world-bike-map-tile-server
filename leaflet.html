@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Custom Tile Server</title>
+
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" href="leaflet.css"/>
+        <script src="leaflet.js"></script>
+
+        <style>
+            html, body, #map {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="map"></div>
+
+        <script>
+            function getQueryParam(param) {
+                var urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get(param);
+            }
+
+            // Function to update the URL with new latitude, longitude, and zoom
+            function updateURL(lat, lng, zoom) {
+                var urlParams = new URLSearchParams(window.location.search);
+                urlParams.set('lat', lat.toFixed(5));  // Keep latitude with 5 decimal places
+                urlParams.set('lng', lng.toFixed(5));  // Keep longitude with 5 decimal places
+                urlParams.set('zoom', zoom);
+                var newUrl = window.location.pathname + '?' + urlParams.toString();
+                history.replaceState(null, '', newUrl);
+            }
+
+            var lat = parseFloat(getQueryParam('lat')) || 0;  // Default latitude
+            var lng = parseFloat(getQueryParam('lng')) || 0;   // Default longitude
+            var zoom = parseInt(getQueryParam('zoom')) || 3;      // Default zoom level
+
+            var map = L.map('map').setView([lat, lng], zoom);
+            // var map = L.map('map').setView([0, 0], 3);
+
+            L.tileLayer('/tile/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+                id: 'base'
+            }).addTo(map);
+
+            // Event listener to update the URL when the map is moved or zoomed
+            map.on('moveend', function() {
+                var center = map.getCenter();
+                var currentZoom = map.getZoom();
+                updateURL(center.lat, center.lng, currentZoom);
+            });
+
+            map.on('zoomend', function() {
+                var center = map.getCenter();
+                var currentZoom = map.getZoom();
+                updateURL(center.lat, center.lng, currentZoom);
+            });
+        </script>
+    </body>
+</html>
