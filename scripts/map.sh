@@ -32,16 +32,16 @@ if [ "$1" == "import" ]; then
         sudo -u postgres /usr/lib/postgresql/$PG_VERSION/bin/pg_ctl -D /data/database/postgres/ initdb -o "--locale C.UTF-8"
     fi
 
-    # Initialize PostgreSQL
-    createPostgresConfig
-    service postgresql start
-    sudo -u postgres createuser renderer
-    sudo -u postgres createdb -E UTF8 -O renderer gis
-    sudo -u postgres psql -d gis -c "CREATE EXTENSION postgis;"
-    sudo -u postgres psql -d gis -c "CREATE EXTENSION hstore;"
-    sudo -u postgres psql -d gis -c "ALTER TABLE geometry_columns OWNER TO renderer;"
-    sudo -u postgres psql -d gis -c "ALTER TABLE spatial_ref_sys OWNER TO renderer;"
-    setPostgresPassword
+    # # Initialize PostgreSQL
+    # createPostgresConfig
+    # service postgresql start
+    # sudo -u postgres createuser renderer
+    # sudo -u postgres createdb -E UTF8 -O renderer gis
+    # sudo -u postgres psql -d gis -c "CREATE EXTENSION postgis;"
+    # sudo -u postgres psql -d gis -c "CREATE EXTENSION hstore;"
+    # sudo -u postgres psql -d gis -c "ALTER TABLE geometry_columns OWNER TO renderer;"
+    # sudo -u postgres psql -d gis -c "ALTER TABLE spatial_ref_sys OWNER TO renderer;"
+    # setPostgresPassword
 
     if [ ! -f /data.osm.pbf ] && [ -z "$DOWNLOAD_PBF" ]; then
         echo "ERROR: No import file"
@@ -73,7 +73,8 @@ if [ "$1" == "import" ]; then
     fi
 
     # Import data
-    sudo -u renderer osm2pgsql -d gis --create --slim -G --hstore \
+    echo "INFO: Importing data"
+    sudo -u renderer osm2pgsql -H db -d gis --create --slim -G --hstore \
         --number-processes ${THREADS:-4} \
         ${OSM2PGSQL_EXTRA_ARGS} \
         /data.osm.pbf
@@ -108,11 +109,11 @@ if [ "$1" = "run" ]; then
         echo "export APACHE_ARGUMENTS='-D ALLOW_CORS'" >> /etc/apache2/envvars
     fi
 
-    # Initialize PostgreSQL and Apache
-    createPostgresConfig
-    service postgresql start
-    service apache2 restart
-    setPostgresPassword
+    # # Initialize PostgreSQL and Apache
+    # # createPostgresConfig
+    # # service postgresql start
+    # service apache2 restart
+    # # setPostgresPassword
 
     # Configure renderd threads
     sed -i -E "s/num_threads=[0-9]+/num_threads=${THREADS:-4}/g" /etc/renderd.conf
@@ -128,11 +129,54 @@ if [ "$1" = "run" ]; then
     }
     trap stop_handler SIGTERM
 
+    echo "Starting renderd"
     sudo -u renderer renderd -f -c /etc/renderd.conf &
+
     child=$!
     wait "$child"
 
-    service postgresql stop
+    # service postgresql stop
+
+    exit 0
+fi
+
+if [ "$1" = "render" ]; then
+
+    # Initialize PostgreSQL and Apache
+    # createPostgresConfig
+    # service postgresql start
+    # service apache2 restart
+    # setPostgresPassword
+
+    # Configure renderd threads
+    sed -i -E "s/num_threads=[0-9]+/num_threads=${THREADS:-4}/g" /etc/renderd.conf
+
+    # # start cron job to trigger consecutive updates
+    # if [ "$UPDATES" = "enabled" ] || [ "$UPDATES" = "1" ]; then
+    #   /etc/init.d/cron start
+    # fi
+
+    # Run while handling docker stop's SIGTERM
+    stop_handler() {
+        # kill -TERM "$child"
+        exit 0
+    }
+
+    trap stop_handler SIGTERM
+
+    sudo -u renderer renderd -c /etc/renderd.conf && 
+    # render_list --help
+    render_list -v -n ${THREADS:-4} -a -z 0 -Z 7
+
+    # render_list -v -n ${THREADS:-4} -a -z 8 -Z 8
+
+    # Edinburgh
+    render_list -v -n ${THREADS:-4} -a -z 18 -Z 18 -x 130000 -X 132000 -y 85000 -Y 87000 
+
+    # child=$!
+    # wait "$child"
+
+    # service postgresql stop
 
     exit 0
 fi

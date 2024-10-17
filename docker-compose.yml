@@ -1,14 +1,86 @@
 version: '3'
 
 services:
-  map:
-    image: bencollinsuk/world-bike-map-tile-server-cyclosm
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile-db
+    image: bencollinsuk/world-bike-map-tile-server-db
     volumes:
-      - openstreetmap-data:/var/lib/postgresql/12/main
+      - ./scripts/db.sh:/db.sh
+      - osm-data:/var/lib/postgresql/12/main
+    environment:
+      - THREADS=4
+      - OSM2PGSQL_EXTRA_ARGS=-C 8192
+    deploy:
+      resources:
+        reservations:
+          cpus: '4'
+          memory: 2G
+    ports:
+      - "5432:5432"
+    command: "db"
+  import:
+    build:
+      context: .
+      dockerfile: Dockerfile-map
+    image: bencollinsuk/world-bike-map-tile-server-map
+    depends_on:
+      - db
+    volumes:
+      - ./scripts/map.sh:/map.sh
+    environment:
+      - THREADS=8
+      - OSM2PGSQL_EXTRA_ARGS=-C 8192
+    deploy:
+      resources:
+        reservations:
+          cpus: '4'
+          memory: 2G
+    command: "import"
+  map:
+    build:
+      context: .
+      dockerfile: Dockerfile-map
+    image: bencollinsuk/world-bike-map-tile-server-map
+    depends_on:
+      - db
+    volumes:
+      - ./scripts/map.sh:/map.sh
+      - /var/cache/renderd/tiles:/var/cache/renderd/tiles
+    environment:
+      - THREADS=2
+      - ALLOW_CORS=1
+      - OSM2PGSQL_EXTRA_ARGS=-C 8192
+      - PGHOST=db
+      - PGUSER=postgres
+    deploy:
+      resources:
+        reservations:
+          cpus: '2'
+          memory: 2G
     ports:
       - "8080:80"
     command: "run"
+  render:
+    build:
+      context: .
+      dockerfile: Dockerfile-map
+    image: bencollinsuk/world-bike-map-tile-server-map
+    depends_on:
+      - db
+    volumes:
+      - ./scripts/map.sh:/map.sh
+      - /var/cache/renderd/tiles:/var/cache/renderd/tiles
+    environment:
+      - THREADS=6
+    deploy:
+      resources:
+        reservations:
+          cpus: '6'
+          memory: 4G
+    command: "render"
 
 volumes:
-  openstreetmap-data:
+  osm-data:
     external: true

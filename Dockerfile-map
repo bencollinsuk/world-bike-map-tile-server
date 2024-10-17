@@ -160,6 +160,9 @@ RUN apt install libapache2-mod-tile renderd
 # && cp noto-emoji/fonts/NotoEmoji-Regular.ttf /usr/share/fonts/truetype/noto \
 # && rm -rf noto-emoji
 
+# Get Noto Emoji Regular font, despite it being deprecated by Google
+RUN wget https://github.com/googlefonts/noto-emoji/blob/9a5261d871451f9b5183c93483cbd68ed916b1e9/fonts/NotoEmoji-Regular.ttf?raw=true --content-disposition -P /usr/share/fonts/
+
 # Configure stylesheet
 RUN mkdir -p /home/renderer/src \
  && cd /home/renderer/src \
@@ -247,8 +250,8 @@ RUN mkdir -p /home/renderer/src \
  && chmod u+x /home/renderer/src/regional/trim_osc.py
 
 # Start running
-COPY run.sh /
+# COPY run.sh /
 COPY indexes.sql /
-ENTRYPOINT ["/run2.sh"]
+ENTRYPOINT ["/map.sh"]
 CMD []
 EXPOSE 80 5432
