@@ -47,11 +47,6 @@ RUN apt-get update && \
   bzip2 \
   cmake \
   cron \
-  fonts-dejavu-core \
-  fonts-hanazono \
-  fonts-noto-cjk \
-  fonts-noto-hinted \
-  fonts-noto-unhinted \
   gcc \
   gdal-bin \
   git-core \
@@ -78,8 +73,6 @@ RUN apt-get update && \
   libxml2-dev \
   lua5.3 \
   make \
-  mapnik-utils \
-  osm2pgsql \
   osmium-tool \
   osmosis \
   postgresql-$PG_VERSION \
@@ -93,7 +86,6 @@ RUN apt-get update && \
   python3-lxml \
   python3-psycopg2 \
   python3-shapely \
-  renderd \
   sudo \
   tar \
   unifont \
@@ -131,9 +123,7 @@ RUN adduser --disabled-password --gecos "" renderer
 # && cp noto-emoji/fonts/NotoColorEmoji.ttf /usr/share/fonts/truetype/noto \
 # && cp noto-emoji/fonts/NotoEmoji-Regular.ttf /usr/share/fonts/truetype/noto \
 # && rm -rf noto-emoji
-
 # Get Noto Emoji Regular font, despite it being deprecated by Google
-RUN wget https://github.com/googlefonts/noto-emoji/blob/9a5261d871451f9b5183c93483cbd68ed916b1e9/fonts/NotoEmoji-Regular.ttf?raw=true --content-disposition -P /usr/share/fonts/
 
 # Configure PostgreSQL
 COPY postgresql.custom.conf.tmpl /etc/postgresql/$PG_VERSION/main/

@@ -210,26 +210,15 @@ COPY leaflet.css /var/www/html/
 RUN ln -sf /dev/stdout /var/log/apache2/access.log \
  && ln -sf /dev/stderr /var/log/apache2/error.log
 
-# Configure PostgreSQL
-COPY postgresql.custom.conf.tmpl /etc/postgresql/$PG_VERSION/main/
-RUN chown -R postgres:postgres /var/lib/postgresql \
- && chown postgres:postgres /etc/postgresql/$PG_VERSION/main/postgresql.custom.conf.tmpl \
- && echo "host all all 0.0.0.0/0 md5" >> /etc/postgresql/$PG_VERSION/main/pg_hba.conf \
- && echo "host all all ::/0 md5" >> /etc/postgresql/$PG_VERSION/main/pg_hba.conf
 
 # Create volume directories
 RUN mkdir -p /run/renderd/ \
-  &&  mkdir  -p  /data/database/  \
   &&  mkdir  -p  /data/style/  \
   &&  mkdir  -p  /home/renderer/src/  \
   &&  chown  -R  renderer:  /data/  \
   &&  chown  -R  renderer:  /home/renderer/src/  \
   &&  chown  -R  renderer:  /run/renderd  \
-  &&  mv  /var/lib/postgresql/$PG_VERSION/main/  /data/database/postgres/  \
-  &&  mv  /var/cache/renderd/tiles/            /data/tiles/     \
-  &&  chown  -R  renderer: /data/tiles \
-  &&  ln  -s  /data/database/postgres  /var/lib/postgresql/$PG_VERSION/main             \
-  &&  ln  -s  /data/tiles              /var/cache/renderd/tiles                \
+  &&  chown  -R  renderer: /var/cache/renderd/tiles \
 ;
 
 # Copy update scripts

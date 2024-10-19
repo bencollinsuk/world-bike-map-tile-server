@@ -2,16 +2,6 @@
 
 set -euo pipefail
 
-function createPostgresConfig() {
-  cp /etc/postgresql/$PG_VERSION/main/postgresql.custom.conf.tmpl /etc/postgresql/$PG_VERSION/main/conf.d/postgresql.custom.conf
-  sudo -u postgres echo "autovacuum = $AUTOVACUUM" >> /etc/postgresql/$PG_VERSION/main/conf.d/postgresql.custom.conf
-  cat /etc/postgresql/$PG_VERSION/main/conf.d/postgresql.custom.conf
-}
-
-function setPostgresPassword() {
-    sudo -u postgres psql -c "ALTER USER renderer PASSWORD '${PGPASSWORD:-renderer}'"
-}
-
 if [ "$#" -ne 1 ]; then
     echo "usage: <import|run>"
     echo "commands:"
@@ -23,25 +13,9 @@ if [ "$#" -ne 1 ]; then
     exit 1
 fi
 
-if [ "$1" == "import" ]; then
-    # Ensure that database directory is in right state
-    mkdir -p /data/database/postgres/
-    chown renderer: /data/database/
-    chown -R postgres: /var/lib/postgresql /data/database/postgres/
-    if [ ! -f /data/database/postgres/PG_VERSION ]; then
-        sudo -u postgres /usr/lib/postgresql/$PG_VERSION/bin/pg_ctl -D /data/database/postgres/ initdb -o "--locale C.UTF-8"
-    fi
 
-    # # Initialize PostgreSQL
-    # createPostgresConfig
-    # service postgresql start
-    # sudo -u postgres createuser renderer
-    # sudo -u postgres createdb -E UTF8 -O renderer gis
-    # sudo -u postgres psql -d gis -c "CREATE EXTENSION postgis;"
-    # sudo -u postgres psql -d gis -c "CREATE EXTENSION hstore;"
-    # sudo -u postgres psql -d gis -c "ALTER TABLE geometry_columns OWNER TO renderer;"
-    # sudo -u postgres psql -d gis -c "ALTER TABLE spatial_ref_sys OWNER TO renderer;"
-    # setPostgresPassword
+if [ "$1" == "import" ]; then
+    sleep 2
 
     if [ ! -f /data.osm.pbf ] && [ -z "$DOWNLOAD_PBF" ]; then
         echo "ERROR: No import file"
@@ -73,36 +47,33 @@ if [ "$1" == "import" ]; then
     fi
 
     # Import data
-    echo "INFO: Importing data"
-    sudo -u renderer osm2pgsql -H db -d gis --create --slim -G --hstore \
-        --number-processes ${THREADS:-4} \
+    echo "INFO: Importing data..."
+    sudo -E -u renderer osm2pgsql --cache ${CACHE:-8000} -H db -U renderer -d gis --create --slim -G --hstore \
+        --number-processes ${THREADS:-8} \
         ${OSM2PGSQL_EXTRA_ARGS} \
         /data.osm.pbf
 
-    # Create indexes
-    sudo -u postgres psql -d gis -f indexes.sql
+    echo "INFO: Importing data done. Creating indexes..."
+    # sudo chmod 777 /root/.postgresql/postgresql.crt
+    sudo -E -u postgres psql -d gis -f indexes.sql
 
-    # Import CyclOSM views
-    sudo -u postgres psql -d gis -f views.sql
-    sudo -u postgres psql -d gis -c "ALTER VIEW cyclosm_ways OWNER TO renderer;"
-    sudo -u postgres psql -d gis -c "ALTER VIEW cyclosm_amenities_point OWNER TO renderer;"
-    sudo -u postgres psql -d gis -c "ALTER VIEW cyclosm_amenities_poly OWNER TO renderer;"
-    sudo -u postgres psql -d gis -c "ALTER VIEW cyclosm_ways OWNER TO renderer;"
+    echo "INFO: Creating views..."
+    sudo -E -u postgres psql -d gis -f views.sql
+    sudo -E -u postgres psql -d gis -c "ALTER VIEW cyclosm_ways OWNER TO renderer;"
+    sudo -E -u postgres psql -d gis -c "ALTER VIEW cyclosm_amenities_point OWNER TO renderer;"
+    sudo -E -u postgres psql -d gis -c "ALTER VIEW cyclosm_amenities_poly OWNER TO renderer;"
+    sudo -E -u postgres psql -d gis -c "ALTER VIEW cyclosm_ways OWNER TO renderer;"
 
     # Register that data has changed for mod_tile caching purposes
     touch /var/lib/mod_tile/planet-import-complete
-
-    service postgresql stop
 
     exit 0
 fi
 
 if [ "$1" = "run" ]; then
+
     # Clean /tmp
     rm -rf /tmp/*
-
-    # Fix postgres data privileges
-    chown -R postgres: /var/lib/postgresql/ /data/database/postgres/
 
     # Configure Apache CORS
     if [ "$ALLOW_CORS" == "enabled" ] || [ "$ALLOW_CORS" == "1" ]; then
@@ -112,7 +83,7 @@ if [ "$1" = "run" ]; then
     # # Initialize PostgreSQL and Apache
     # # createPostgresConfig
     # # service postgresql start
-    # service apache2 restart
+    service apache2 restart
     # # setPostgresPassword
 
     # Configure renderd threads
@@ -128,6 +99,8 @@ if [ "$1" = "run" ]; then
         kill -TERM "$child"
     }
     trap stop_handler SIGTERM
+
+    sleep 2
 
     echo "Starting renderd"
     sudo -u renderer renderd -f -c /etc/renderd.conf &
@@ -164,19 +137,22 @@ if [ "$1" = "render" ]; then
 
     trap stop_handler SIGTERM
 
+    echo "Starting renderd with render_list using ${THREADS:-4} threads..."
+
     sudo -u renderer renderd -c /etc/renderd.conf && 
     # render_list --help
     render_list -v -n ${THREADS:-4} -a -z 0 -Z 7
+    # render_list -v -n ${THREADS:-4} -a -z 8 -Z 8
+    # render_list -v -n ${THREADS:-4} -a -z 9 -Z 9
+    # render_list -v -n ${THREADS:-4} -a -z 10 -Z 10
+    # render_list -v -n ${THREADS:-4} -a -z 11 -Z 11
+    # render_list -v -n ${THREADS:-4} -a -z 13 -Z 13
+    # render_list -v -n ${THREADS:-4} -a -z 14 -Z 14
 
     # render_list -v -n ${THREADS:-4} -a -z 8 -Z 8
 
     # Edinburgh
-    render_list -v -n ${THREADS:-4} -a -z 18 -Z 18 -x 130000 -X 132000 -y 85000 -Y 87000 
-
-    # child=$!
-    # wait "$child"
-
-    # service postgresql stop
+    # render_list -v -n ${THREADS:-4} -a -z 18 -Z 18 -x 130000 -X 132000 -y 85000 -Y 87000 
 
     exit 0
 fi

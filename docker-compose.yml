@@ -12,6 +12,7 @@ services:
     environment:
       - THREADS=4
       - OSM2PGSQL_EXTRA_ARGS=-C 8192
+      - PGPASSWORD=renderer
     deploy:
       resources:
         reservations:
@@ -29,7 +30,11 @@ services:
       - db
     volumes:
       - ./scripts/map.sh:/map.sh
+      - /home/shared/luxembourg-latest.osm.pbf:/data.osm.pbf
     environment:
+      - PGUSER=renderer
+      - PGPASSWORD=renderer
+      - PGHOST=db
       - THREADS=8
       - OSM2PGSQL_EXTRA_ARGS=-C 8192
     deploy:
@@ -47,13 +52,14 @@ services:
       - db
     volumes:
       - ./scripts/map.sh:/map.sh
-      - /var/cache/renderd/tiles:/var/cache/renderd/tiles
+      - osm-tiles:/var/cache/renderd/tiles
     environment:
       - THREADS=2
       - ALLOW_CORS=1
       - OSM2PGSQL_EXTRA_ARGS=-C 8192
       - PGHOST=db
       - PGUSER=postgres
+      - PGPASSWORD=renderer
     deploy:
       resources:
         reservations:
@@ -71,16 +77,18 @@ services:
       - db
     volumes:
       - ./scripts/map.sh:/map.sh
-      - /var/cache/renderd/tiles:/var/cache/renderd/tiles
+      - osm-tiles:/var/cache/renderd/tiles
     environment:
-      - THREADS=6
+      - THREADS=12
     deploy:
       resources:
         reservations:
-          cpus: '6'
-          memory: 4G
+          cpus: '12'
+          memory: 8G
     command: "render"
 
 volumes:
+  osm-tiles:
+    external: true
   osm-data:
     external: true
