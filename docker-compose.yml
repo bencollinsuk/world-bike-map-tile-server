@@ -4,7 +4,7 @@ services:
   db:
     build:
       context: .
-      dockerfile: Dockerfile-db
+      dockerfile: Dockerfile.db
     image: bencollinsuk/world-bike-map-tile-server-db
     volumes:
       - ./scripts/db.sh:/db.sh
@@ -24,7 +24,7 @@ services:
   import:
     build:
       context: .
-      dockerfile: Dockerfile-map
+      dockerfile: Dockerfile.map
     image: bencollinsuk/world-bike-map-tile-server-map
     depends_on:
       - db
