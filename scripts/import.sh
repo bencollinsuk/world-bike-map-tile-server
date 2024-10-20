@@ -35,7 +35,7 @@ fi
 
 # Import data
 echo "INFO: Importing data..."
-sudo -E -u renderer osm2pgsql --cache ${CACHE:-8000} -H db -U $PGUSER -d gis --create --slim -G --hstore \
+sudo -E -u renderer osm2pgsql --cache ${CACHE:-8000} -H $PGHOST -U $PGUSER -d gis --create --slim -G --hstore \
     --number-processes ${THREADS:-8} \
     ${OSM2PGSQL_EXTRA_ARGS} \
     /data.osm.pbf

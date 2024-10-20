@@ -28,8 +28,6 @@ services:
     image: world-bike-map-tile-server-import:latest
     depends_on:
       - db
-    volumes:
-      - /home/shared/united-kingdom-latest.osm.pbf:/data.osm.pbf
     environment:
       - PGUSER=renderer
       - PGPASSWORD=renderer

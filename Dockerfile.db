@@ -90,8 +90,8 @@ RUN apt-get update \
 RUN adduser --disabled-password --gecos "" renderer
 
 # Copy update scripts
-COPY openstreetmap-tiles-update-expire.sh /usr/bin/
-RUN chmod +x /usr/bin/openstreetmap-tiles-update-expire.sh \
+COPY openstreetmap-tiles-update-expire /usr/bin/
+RUN chmod +x /usr/bin/openstreetmap-tiles-update-expire \
 && mkdir /var/log/tiles \
 && chmod a+rw /var/log/tiles \
 && ln -s /home/renderer/src/mod_tile/osmosis-db_replag /usr/bin/osmosis-db_replag \
