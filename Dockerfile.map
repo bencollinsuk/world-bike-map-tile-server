@@ -152,13 +152,13 @@ RUN apt install libapache2-mod-tile renderd
 #  && cd ..
 
 # Configure Noto Emoji font
-# RUN mkdir -p /home/renderer/src \
-# && cd /home/renderer/src \
-# && git clone https://github.com/googlei18n/noto-emoji.git \
-# && git -C noto-emoji checkout e0aa9412575fc39384efd39f90c4390d66bdd18f \
-# && cp noto-emoji/fonts/NotoColorEmoji.ttf /usr/share/fonts/truetype/noto \
-# && cp noto-emoji/fonts/NotoEmoji-Regular.ttf /usr/share/fonts/truetype/noto \
-# && rm -rf noto-emoji
+RUN mkdir -p /home/renderer/src \
+&& cd /home/renderer/src \
+&& git clone https://github.com/googlei18n/noto-emoji.git \
+&& git -C noto-emoji checkout e0aa9412575fc39384efd39f90c4390d66bdd18f \
+&& cp noto-emoji/fonts/NotoColorEmoji.ttf /usr/share/fonts/truetype/noto \
+&& cp noto-emoji/fonts/NotoEmoji-Regular.ttf /usr/share/fonts/truetype/noto \
+&& rm -rf noto-emoji
 
 # Get Noto Emoji Regular font, despite it being deprecated by Google
 RUN wget https://github.com/googlefonts/noto-emoji/blob/9a5261d871451f9b5183c93483cbd68ed916b1e9/fonts/NotoEmoji-Regular.ttf?raw=true --content-disposition -P /usr/share/fonts/
@@ -239,7 +239,7 @@ RUN mkdir -p /home/renderer/src \
  && chmod u+x /home/renderer/src/regional/trim_osc.py
 
 # Start running
-# COPY run.sh /
+COPY scripts/map.sh /
 COPY indexes.sql /
 ENTRYPOINT ["/map.sh"]
 CMD []

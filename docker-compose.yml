@@ -6,13 +6,14 @@ services:
       context: .
       dockerfile: Dockerfile.db
     image: bencollinsuk/world-bike-map-tile-server-db
-    volumes:
-      - ./scripts/db.sh:/db.sh
-      - osm-data:/var/lib/postgresql/12/main
     environment:
-      - THREADS=4
       - OSM2PGSQL_EXTRA_ARGS=-C 8192
+      - PGDATA=/var/lib/postgresql/data
       - PGPASSWORD=renderer
+      - POSTGRES_DB=gis
+      - POSTGRES_PASSWORD=renderer
+      - POSTGRES_USER=renderer
+      - THREADS=4
     deploy:
       resources:
         reservations:
@@ -20,23 +21,24 @@ services:
           memory: 2G
     ports:
       - "5432:5432"
-    command: "db"
   import:
     build:
       context: .
-      dockerfile: Dockerfile.map
-    image: bencollinsuk/world-bike-map-tile-server-map
+      dockerfile: Dockerfile.import
+    image: world-bike-map-tile-server-import:latest
     depends_on:
       - db
     volumes:
-      - ./scripts/map.sh:/map.sh
-      - /home/shared/luxembourg-latest.osm.pbf:/data.osm.pbf
+      - /home/shared/united-kingdom-latest.osm.pbf:/data.osm.pbf
     environment:
       - PGUSER=renderer
       - PGPASSWORD=renderer
       - PGHOST=db
       - THREADS=8
       - OSM2PGSQL_EXTRA_ARGS=-C 8192
+      - DOWNLOAD_PBF=https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf
+      - WGET_ARGS=--quiet
+      - DOWNLOAD_POLY=
     deploy:
       resources:
         reservations:
@@ -46,20 +48,19 @@ services:
   map:
     build:
       context: .
-      dockerfile: Dockerfile-map
-    image: bencollinsuk/world-bike-map-tile-server-map
+      dockerfile: Dockerfile.map
+    image: world-bike-map-tile-server-map:latest
     depends_on:
       - db
     volumes:
-      - ./scripts/map.sh:/map.sh
       - osm-tiles:/var/cache/renderd/tiles
     environment:
-      - THREADS=2
       - ALLOW_CORS=1
       - OSM2PGSQL_EXTRA_ARGS=-C 8192
       - PGHOST=db
-      - PGUSER=postgres
       - PGPASSWORD=renderer
+      - PGUSER=renderer
+      - THREADS=2
     deploy:
       resources:
         reservations:
@@ -71,12 +72,11 @@ services:
   render:
     build:
       context: .
-      dockerfile: Dockerfile-map
-    image: bencollinsuk/world-bike-map-tile-server-map
+      dockerfile: Dockerfile.render
+    image: world-bike-map-tile-server-render:latest
     depends_on:
       - db
     volumes:
-      - ./scripts/map.sh:/map.sh
       - osm-tiles:/var/cache/renderd/tiles
     environment:
       - THREADS=12
