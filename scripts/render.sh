@@ -28,7 +28,8 @@ echo "Starting renderd with render_list using ${THREADS:-4} threads..."
 
 sudo -u renderer renderd -c /etc/renderd.conf && 
 # render_list --help
-render_list -v -n ${THREADS:-4} -a -z 0 -Z 7
+render_list -v -n ${THREADS:-4} -a -z 0 -Z ${MAX_ZOOM:-3}
+
 # render_list -v -n ${THREADS:-4} -a -z 8 -Z 8
 # render_list -v -n ${THREADS:-4} -a -z 9 -Z 9
 # render_list -v -n ${THREADS:-4} -a -z 10 -Z 10

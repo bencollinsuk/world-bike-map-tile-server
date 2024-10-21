@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.db
-    image: bencollinsuk/world-bike-map-tile-server-db
+    image: world-bike-map-tile-server-db
     environment:
       - OSM2PGSQL_EXTRA_ARGS=-C 8192
       - PGDATA=/var/lib/postgresql/data
@@ -34,7 +34,7 @@ services:
       - PGHOST=db
       - THREADS=8
       - OSM2PGSQL_EXTRA_ARGS=-C 8192
-      - DOWNLOAD_PBF=https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf
+      - DOWNLOAD_PBF=https://download.geofabrik.de/europe/isle-of-man-latest.osm.pbf
       - WGET_ARGS=--quiet
       - DOWNLOAD_POLY=
     deploy:
@@ -78,6 +78,8 @@ services:
       - osm-tiles:/var/cache/renderd/tiles
     environment:
       - THREADS=12
+      - MAX_ZOOM=3
+      - WGET_ARGS=--quiet
     deploy:
       resources:
         reservations:

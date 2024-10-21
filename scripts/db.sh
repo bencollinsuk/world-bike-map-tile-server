@@ -20,17 +20,19 @@ if [ ! -f /DB_INITIALIZED ]; then
     echo "INFO: Initializing database..."
     service postgresql start
 
-    sudo -u postgres createuser renderer
+    # sudo -u postgres createuser renderer
+    sudo -u postgres psql -c "CREATE ROLE renderer WITH LOGIN PASSWORD '${PGPASSWORD:-renderer}'";
     sudo -u postgres createdb -E UTF8 -O renderer gis
     sudo -u postgres psql -d gis -c "CREATE EXTENSION postgis;"
     sudo -u postgres psql -d gis -c "CREATE EXTENSION hstore;"
     sudo -u postgres psql -d gis -c "ALTER TABLE geometry_columns OWNER TO renderer;"
     sudo -u postgres psql -d gis -c "ALTER TABLE spatial_ref_sys OWNER TO renderer;"
-    sudo -u postgres psql -c "ALTER USER renderer PASSWORD '${PGPASSWORD:-renderer}'"
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE gis TO renderer;"
 
     # Fix postgres data privileges
     chown -R postgres: /var/lib/postgresql/ /data/database/postgres/
 else
+    echo "INFO: Starting PostgreSQL... $PGPASSWORD"
     service postgresql start
 fi
 

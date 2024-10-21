@@ -7,6 +7,18 @@ if [ ! -f /data.osm.pbf ] && [ -z "$DOWNLOAD_PBF" ]; then
     exit 1
 fi
 
+sudo -E -u renderer echo "$PGHOST:5432:gis:$PGUSER:$PGPASSWORD" > /home/renderer/.pgpass
+sudo chmod 0600 /home/renderer/.pgpass
+sudo cat /home/renderer/.pgpass # postgres-service-blue:5432:gis:renderer:renderer
+
+echo "INFO: Waiting for PostgreSQL to be ready..."
+until PGPASSWORD=$PGPASSWORD psql -h $PGHOST -U $PGUSER -d gis -c '\q'; do
+    echo "INFO: PostgreSQL is not ready yet. Retrying..."
+    sleep 3
+done
+
+echo "INFO: PostgreSQL is ready"
+
 if [ -n "$DOWNLOAD_PBF" ]; then
     echo "INFO: Download PBF file: $DOWNLOAD_PBF"
     echo "INFO: Running wget $WGET_ARGS $DOWNLOAD_PBF -O /data.osm.pbf"
@@ -35,10 +47,12 @@ fi
 
 # Import data
 echo "INFO: Importing data..."
-sudo -E -u renderer osm2pgsql --cache ${CACHE:-8000} -H $PGHOST -U $PGUSER -d gis --create --slim -G --hstore \
+
+echo "INFO: Running osm2pgsql --verbose --cache ${CACHE:-8000} -H $PGHOST -U $PGUSER -w -d gis --create --slim -G --hstore --number-processes ${THREADS:-8} ${OSM2PGSQL_EXTRA_ARGS} /data.osm.pbf"
+sudo -E -u renderer osm2pgsql --verbose --cache ${CACHE:-8000} -d postgresql://$PGUSER:renderer@$PGHOST:5432/gis --create --slim -G --hstore \
     --number-processes ${THREADS:-8} \
     ${OSM2PGSQL_EXTRA_ARGS} \
-    /data.osm.pbf
+    /data.osm.pbf 
 
 echo "INFO: Importing data done. Creating indexes..."
 # sudo chmod 777 /root/.postgresql/postgresql.crt
