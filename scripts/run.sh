@@ -156,7 +156,7 @@ if [ "$1" == "run" ]; then
     rm -rf /tmp/*
 
     echo "INFO: Waiting for PostgreSQL to be ready..."
-    until PGPASSWORD=$PGPASSWORD psql -h $PGHOST -U $PGUSER -d gis -c '\q'; do
+    until PGPASSWORD=$PGPASSWORD psql -h $PGHOST -U $PGUSER -d gis -c 'SELECT ST_SRID("way") FROM planet_osm_polygon limit 1'; do
         echo "INFO: PostgreSQL is not ready yet. Retrying..."
         sleep 3
     done

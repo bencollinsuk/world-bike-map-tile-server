@@ -205,4 +205,3 @@ COPY indexes.sql /
 COPY scripts/run.sh /run.sh
 ENTRYPOINT ["/run.sh"]
 CMD []
-EXPOSE 80 5432
