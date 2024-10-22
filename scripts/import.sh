@@ -19,6 +19,15 @@ done
 
 echo "INFO: PostgreSQL is ready"
 
+echo "INFO: Running carto"
+mkdir -p /home/renderer/src \
+ && cd /home/renderer/src \
+ && cd world-bike-map-cartocss-style \
+ && sed -i 's/dbname: "osm"/dbname: "gis"/g' project.mml \
+ && sed -i 's/database_host/$PGHOST/g' project.mml \
+ && carto project.mml > mapnik.xml
+cd /
+
 if [ -n "$DOWNLOAD_PBF" ]; then
     echo "INFO: Download PBF file: $DOWNLOAD_PBF"
     echo "INFO: Running wget $WGET_ARGS $DOWNLOAD_PBF -O /data.osm.pbf"
@@ -60,10 +69,16 @@ sudo -E -u postgres psql -d gis -f indexes.sql
 
 echo "INFO: Creating views..."
 sudo -E -u postgres psql -d gis -f views.sql
+echo "INFO: Finished creating views"
+sudo -E -u postgres psql -d gis -c "\dv"
+
 sudo -E -u postgres psql -d gis -c "ALTER VIEW cyclosm_ways OWNER TO renderer;"
 sudo -E -u postgres psql -d gis -c "ALTER VIEW cyclosm_amenities_point OWNER TO renderer;"
 sudo -E -u postgres psql -d gis -c "ALTER VIEW cyclosm_amenities_poly OWNER TO renderer;"
 sudo -E -u postgres psql -d gis -c "ALTER VIEW cyclosm_ways OWNER TO renderer;"
+sudo -E -u postgres psql -d gis -c "\dv"
+
+
 
 # Register that data has changed for mod_tile caching purposes
 touch /var/lib/mod_tile/planet-import-complete
