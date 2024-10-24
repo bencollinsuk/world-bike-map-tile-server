@@ -2,20 +2,20 @@
 
 set -euo pipefail
 
-if [ "$#" -ne 1 ]; then
-    echo "usage: <import|run>"
-    echo "commands:"
-    echo "    import: Set up the database and import /data/region.osm.pbf"
-    echo "    run: Runs Apache and renderd to serve tiles at /tile/{z}/{x}/{y}.png"
-    echo "environment variables:"
-    echo "    THREADS: defines number of threads used for importing / tile rendering"
-    echo "    UPDATES: consecutive updates (enabled/disabled)"
-    echo "    NAME_LUA: name of .lua script to run as part of the style"
-    echo "    NAME_STYLE: name of the .style to use"
-    echo "    NAME_MML: name of the .mml file to render to mapnik.xml"
-    echo "    NAME_SQL: name of the .sql file to use"
-    exit 1
-fi
+# if [ "$#" -ne 1 ]; then
+#     echo "usage: <import|run>"
+#     echo "commands:"
+#     echo "    import: Set up the database and import /data/region.osm.pbf"
+#     echo "    run: Runs Apache and renderd to serve tiles at /tile/{z}/{x}/{y}.png"
+#     echo "environment variables:"
+#     echo "    THREADS: defines number of threads used for importing / tile rendering"
+#     echo "    UPDATES: consecutive updates (enabled/disabled)"
+#     echo "    NAME_LUA: name of .lua script to run as part of the style"
+#     echo "    NAME_STYLE: name of the .style to use"
+#     echo "    NAME_MML: name of the .mml file to render to mapnik.xml"
+#     echo "    NAME_SQL: name of the .sql file to use"
+#     exit 1
+# fi
 
 # set -x
 
@@ -30,18 +30,17 @@ cd /
 
 sudo -E -u renderer echo "$PGHOST:5432:gis:$PGUSER:$PGPASSWORD" > /home/renderer/.pgpass
 sudo chmod 0600 /home/renderer/.pgpass
-sudo cat /home/renderer/.pgpass # postgres-service-blue:5432:gis:renderer:renderer
+sudo cat /home/renderer/.pgpass
 
-echo "INFO: Waiting for PostgreSQL to be ready..."
-until PGPASSWORD=$PGPASSWORD psql -h $PGHOST -U $PGUSER -d gis -c '\q'; do
-    echo "INFO: PostgreSQL is not ready yet. Retrying..."
-    sleep 3
-done
+# RESULT=$(PGPASSWORD=$PGPASSWORD psql -h $PGHOST -U $PGUSER -d gis -c "SELECT EXISTS (SELECT 1 FROM information_schema.views WHERE table_name = 'planet_osm_polygon');")
 
-echo "INFO: PostgreSQL is ready"
+# # Trim whitespace from result
+# RESULT=$(echo "$RESULT" | xargs)
+PGPASSWORD=$PGPASSWORD
 
-if [ "$1" == import ]; then
-    if [ ! -f /data.osm.pbf ] && [ -z "$DOWNLOAD_PBF" ]; then
+if ! psql -h $PGHOST -U $PGUSER -d gis -c 'SELECT ST_SRID("way") FROM planet_osm_polygon limit 1'; then
+
+    if [ ! -f /osm-data/data.osm.pbf ] && [ -z "$DOWNLOAD_PBF" ]; then
         echo "ERROR: No import file"
         exit 1
     fi
@@ -57,19 +56,19 @@ if [ "$1" == import ]; then
 
     if [ -n "${DOWNLOAD_PBF:-}" ]; then
         echo "INFO: Download PBF file: $DOWNLOAD_PBF"
-    echo "INFO: Running wget $WGET_ARGS $DOWNLOAD_PBF -O /data.osm.pbf"
-    wget "$WGET_ARGS" "$DOWNLOAD_PBF" -O /data.osm.pbf
-    if [ -n "$DOWNLOAD_POLY" ]; then
-            echo "INFO: Download PBF-POLY file: $DOWNLOAD_POLY"
-        wget "$WGET_ARGS" "$DOWNLOAD_POLY" -O /data.poly
-        fi
-    echo "INFO: Download done"
+        echo "INFO: Running wget $WGET_ARGS $DOWNLOAD_PBF -O /osm-data/data.osm.pbf"
+        wget "$WGET_ARGS" "$DOWNLOAD_PBF" -O /osm-data/data.osm.pbf
+        if [ -n "$DOWNLOAD_POLY" ]; then
+                echo "INFO: Download PBF-POLY file: $DOWNLOAD_POLY"
+            wget "$WGET_ARGS" "$DOWNLOAD_POLY" -O /data.poly
+            fi
+        echo "INFO: Download done"
     fi
 
     if [ "$UPDATES" = "enabled" ]; then
         # determine and set osmosis_replication_timestamp (for consecutive updates)
-        osmium fileinfo /data.osm.pbf > /var/lib/mod_tile/data.osm.pbf.info
-        osmium fileinfo /data.osm.pbf | grep 'osmosis_replication_timestamp=' | cut -b35-44 > /var/lib/mod_tile/replication_timestamp.txt
+        osmium fileinfo /osm-data/data.osm.pbf > /var/lib/mod_tile/osm-data/data.osm.pbf.info
+        osmium fileinfo /osm-data/data.osm.pbf | grep 'osmosis_replication_timestamp=' | cut -b35-44 > /var/lib/mod_tile/replication_timestamp.txt
         REPLICATION_TIMESTAMP=$(cat /var/lib/mod_tile/replication_timestamp.txt)
 
         # initial setup of osmosis workspace (for consecutive updates)
@@ -86,7 +85,7 @@ if [ "$1" == import ]; then
     sudo -E -u renderer osm2pgsql --verbose --cache ${CACHE:-8000} -d postgresql://$PGUSER:renderer@$PGHOST:5432/gis --create --slim -G --hstore \
         --number-processes ${THREADS:-8} \
         ${OSM2PGSQL_EXTRA_ARGS} \
-        /data.osm.pbf 
+        /osm-data/data.osm.pbf 
 
     echo "INFO: Importing data done. Creating indexes..."
     # sudo chmod 777 /root/.postgresql/postgresql.crt
@@ -110,10 +109,10 @@ if [ "$1" == import ]; then
     # sudo -u renderer touch /data/database/planet-import-complete
 
 
-    exit 0
-fi
+#     exit 0
+# fi
 
-if [ "$1" == "render" ]; then
+# if [ "$1" == "render" ]; then
     # Configure renderd threads
     sed -i -E "s/num_threads=[0-9]+/num_threads=${THREADS:-4}/g" /etc/renderd.conf
 
@@ -134,7 +133,12 @@ if [ "$1" == "render" ]; then
 
     sudo -u renderer renderd -c /etc/renderd.conf && 
     # render_list --help
-    render_list -v -n ${THREADS:-4} -a -z 0 -Z ${MAX_ZOOM:-3}
+    # render_list -v -n ${THREADS:-4} -a -z 0 -Z ${MAX_ZOOM:-3}
+
+    for i in {0..${MAX_ZOOM:-3}}; do
+        echo "Rendering zoom level $i..."
+        render_list -v -n ${THREADS:-4} -a -z $i -Z $i
+    done
 
     # render_list -v -n ${THREADS:-4} -a -z 8 -Z 8
     # render_list -v -n ${THREADS:-4} -a -z 9 -Z 9
@@ -148,10 +152,10 @@ if [ "$1" == "render" ]; then
     # Edinburgh
     # render_list -v -n ${THREADS:-4} -a -z 18 -Z 18 -x 130000 -X 132000 -y 85000 -Y 87000 
 
-    exit 0
+#     exit 0
 fi
 
-if [ "$1" == "run" ]; then
+# if [ "$1" == "run" ]; then
     # Clean /tmp
     rm -rf /tmp/*
 
@@ -196,7 +200,7 @@ if [ "$1" == "run" ]; then
     echo "$PGHOST:5432:gis:$PGUSER:$PGPASSWORD" > ~/.pgpass
     sudo chmod 0600 ~/.pgpass
     whoami
-    sudo cat ~/.pgpass # postgres-service-blue:5432:gis:renderer:renderer
+    sudo cat ~/.pgpass
 
     echo "INFO: Waiting for PostgreSQL to be ready..."
     until PGPASSWORD=$PGPASSWORD psql -h $PGHOST -U $PGUSER -d gis -c '\q'; do
@@ -210,6 +214,8 @@ if [ "$1" == "run" ]; then
 
     # Configure renderd threads
     sed -i -E "s/num_threads=[0-9]+/num_threads=${THREADS:-4}/g" /etc/renderd.conf
+    # TODO!
+    sed -i -E "s/localhost/$PGHOST/g" /etc/renderd.conf
 
     # start cron job to trigger consecutive updates
     if [ "${UPDATES:-}" == "enabled" ] || [ "${UPDATES:-}" == "1" ]; then
@@ -237,7 +243,7 @@ if [ "$1" == "run" ]; then
     wait "$child"
 
     exit 0
-fi
+# fi
 
 echo "invalid command"
 exit 1

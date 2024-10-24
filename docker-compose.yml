@@ -14,8 +14,6 @@ services:
       - POSTGRES_PASSWORD=renderer
       - POSTGRES_USER=renderer
       - THREADS=4
-    volumes:
-      - osm-data:/var/lib/postgresql/12/main
     deploy:
       resources:
         reservations:
@@ -23,13 +21,16 @@ services:
           memory: 2G
     ports:
       - "5432:5432"
-  import:
+  server:
     build:
       context: .
       dockerfile: Dockerfile
     image: world-bike-map-tile-server
     depends_on:
       - db
+    volumes:
+      - osm-data:/osm-data
+      - osm-tiles:/var/lib/mod_tile
     environment:
       - PGHOST=${PGHOST}
       - PGUSER=${PGUSER}
@@ -39,59 +40,13 @@ services:
       - DOWNLOAD_PBF=https://download.geofabrik.de/europe/isle-of-man-latest.osm.pbf
       - WGET_ARGS=--quiet
       - DOWNLOAD_POLY=
-    deploy:
-      resources:
-        reservations:
-          cpus: '4'
-          memory: 2G
-    command: "import"
-  map:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: world-bike-map-tile-server
-    depends_on:
-      - db
-    volumes:
-      - osm-tiles:/var/cache/renderd/tiles
-    environment:
-      - PGHOST=${PGHOST}
-      - PGUSER=${PGUSER}
-      - PGPASSWORD=${PGPASSWORD}
-      - ALLOW_CORS=1
-      - OSM2PGSQL_EXTRA_ARGS=-C 8192
-      - THREADS=2
-    deploy:
-      resources:
-        reservations:
-          cpus: '2'
-          memory: 2G
-    ports:
-      - "8080:80"
-    command: "run"
-  render:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: world-bike-map-tile-server
-    depends_on:
-      - db
-    volumes:
-      - osm-tiles:/var/cache/renderd/tiles
-    environment:
-      - PGHOST=${PGHOST}
-      - PGUSER=${PGUSER}
-      - PGPASSWORD=${PGPASSWORD}
-      - THREADS=12
       - MAX_ZOOM=3
-      - WGET_ARGS=--quiet
+      - ALLOW_CORS=1
     deploy:
       resources:
         reservations:
           cpus: '12'
-          memory: 8G
-    command: "render"
-
+          memory: 2G
 volumes:
   osm-tiles:
     external: true

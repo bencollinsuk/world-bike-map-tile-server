@@ -20,6 +20,9 @@ if [ ! -f /DB_INITIALIZED ]; then
     echo "INFO: Initializing database..."
     service postgresql start
 
+    sudo -u postgres psql -c "ALTER SYSTEM SET work_mem='${PG_WORK_MEM:-256MB}';"
+    sudo -u postgres psql -c "ALTER SYSTEM SET maintenance_work_mem='${PG_MAINTENANCE_WORK_MEM:-1024MB}';"
+
     # sudo -u postgres createuser renderer
     sudo -u postgres psql -c "CREATE ROLE renderer WITH LOGIN PASSWORD '${PGPASSWORD:-renderer}'";
     sudo -u postgres createdb -E UTF8 -O renderer gis
