@@ -40,7 +40,7 @@ services:
       - DOWNLOAD_PBF=https://download.geofabrik.de/europe/isle-of-man-latest.osm.pbf
       - WGET_ARGS=--quiet
       - DOWNLOAD_POLY=
-      - MAX_ZOOM=3
+      - MAX_ZOOM=15
       - ALLOW_CORS=1
     deploy:
       resources:
