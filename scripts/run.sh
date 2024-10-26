@@ -133,26 +133,45 @@ if ! psql -h $PGHOST -U $PGUSER -d gis -c 'SELECT ST_SRID("way") FROM planet_osm
 
     sudo -u renderer renderd -c /etc/renderd.conf && 
     # render_list --help
-    # render_list -v -n ${THREADS:-4} -a -z 0 -Z ${MAX_ZOOM:-3}
 
-    for i in {0..${MAX_ZOOM:-3}}; do
-        echo "Rendering zoom level $i..."
-        render_list -v -n ${THREADS:-4} -a -z $i -Z $i
+    # Define the UK bounding box in latitude and longitude
+    west=-10.8545
+    south=49.8634
+    east=1.7620
+    north=60.8606
+
+    # Define zoom range
+    min_zoom=0
+    max_zoom=${MAX_ZOOM:-15}
+
+    # Function to convert lat/lon to tile coordinates
+    latlon_to_tile() {
+        local lat=$1
+        local lon=$2
+        local zoom=$3
+
+        # Calculate x and y tile numbers using Web Mercator projection
+        local x=$(echo "($lon + 180) / 360 * (2 ^ $zoom)" | bc -l)
+        local sin_lat=$(echo "s($lat * 4 * a(1) / 180)" | bc -l)
+        local y=$(echo "(1 - l((1 + $sin_lat) / (1 - $sin_lat)) / (4 * a(1))) / 2 * (2 ^ $zoom)" | bc -l)
+
+        # Convert to integer values
+        x=$(printf "%.0f" "$x")
+        y=$(printf "%.0f" "$y")
+        echo "$x $y"
+    }
+
+    # Loop through each zoom level
+    for zoom in $(seq $min_zoom $max_zoom); do
+        # Calculate tile coordinates for the bounding box
+        read min_x min_y <<< $(latlon_to_tile $north $west $zoom)
+        read max_x max_y <<< $(latlon_to_tile $south $east $zoom)
+        
+        # Render tiles for the calculated tile range at the current zoom level
+        echo "INFO: Rendering zoom level $zoom..."
+        render_list -v -n ${THREADS:-4} -a -z $zoom -Z $zoom -x $min_x -y $min_y -X $max_x -Y $max_y
     done
 
-    # render_list -v -n ${THREADS:-4} -a -z 8 -Z 8
-    # render_list -v -n ${THREADS:-4} -a -z 9 -Z 9
-    # render_list -v -n ${THREADS:-4} -a -z 10 -Z 10
-    # render_list -v -n ${THREADS:-4} -a -z 11 -Z 11
-    # render_list -v -n ${THREADS:-4} -a -z 13 -Z 13
-    # render_list -v -n ${THREADS:-4} -a -z 14 -Z 14
-
-    # render_list -v -n ${THREADS:-4} -a -z 8 -Z 8
-
-    # Edinburgh
-    # render_list -v -n ${THREADS:-4} -a -z 18 -Z 18 -x 130000 -X 132000 -y 85000 -Y 87000 
-
-#     exit 0
 fi
 
 # if [ "$1" == "run" ]; then
