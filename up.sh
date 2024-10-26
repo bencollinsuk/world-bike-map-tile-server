@@ -1,5 +1,6 @@
 
-eval $(minikube -p minikube docker-env)
+# eval $(minikube -p minikube docker-env)
+
 docker volume create osm-data
 docker volume create osm-tiles
 docker compose up --build
