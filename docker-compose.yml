@@ -49,6 +49,4 @@ services:
           memory: 2G
 volumes:
   osm-tiles:
-    external: true
   osm-data:
-    external: true
