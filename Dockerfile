@@ -44,64 +44,22 @@ RUN apt-get update && \
   apt-get install -y --no-install-recommends \
   apache2 \
   apache2-dev \
-  autoconf \
-  build-essential \
-  bzip2 \
-  cmake \
-  cron \
   fonts-dejavu-core \
   fonts-hanazono \
   fonts-noto-cjk \
   fonts-noto-hinted \
   fonts-noto-unhinted \
-  gcc \
-  gdal-bin \
-  git-core \
-  libagg-dev \
-  libboost-filesystem-dev \
-  libboost-system-dev \
-  libbz2-dev \
-  libcairo-dev \
-  libcairomm-1.0-dev \
-  libexpat1-dev \
-  libfreetype6-dev \
-  libgdal-dev \
-  libgeos++-dev \
-  libgeos-dev \
-  libgeotiff-dev \
-  libicu-dev \
-  liblua5.3-dev \
-  libmapnik-dev \
-  libpq-dev \
-  libproj-dev \
-  libprotobuf-c-dev \
-  libtiff5-dev \
-  libtool \
-  libxml2-dev \
-  lua5.3 \
-  make \
-  mapnik-utils \
+  libapache2-mod-tile \
   osm2pgsql \
-  osmium-tool \
-  osmosis \
-  iputils-ping \
   postgresql-$PG_VERSION \
   postgresql-$PG_VERSION-postgis-3 \
   postgresql-$PG_VERSION-postgis-3-scripts \
   postgresql-contrib-$PG_VERSION \
   postgresql-server-dev-$PG_VERSION \
   postgis \
-  protobuf-c-compiler \
-  python3-mapnik \
-  python3-lxml \
-  python3-psycopg2 \
-  python3-shapely \
   renderd \
   sudo \
-  tar \
   unifont \
-  unzip \
-  zlib1g-dev \
 && apt-get clean autoclean \
 && apt-get autoremove --yes \
 && rm -rf /var/lib/{apt,dpkg,cache,log}/
@@ -112,7 +70,7 @@ RUN npm config set update-notifier false
 RUN adduser --disabled-password --gecos "" renderer
 RUN echo "renderer:renderer" | sudo chpasswd
 
-RUN apt install libapache2-mod-tile renderd
+# RUN apt install libapache2-mod-tile renderd
 
 # Configure Noto Emoji font
 RUN mkdir -p /home/renderer/src \
@@ -131,6 +89,10 @@ RUN mkdir -p /home/renderer/src \
  && cd /home/renderer/src \
  && git clone https://github.com/bencollinsuk/world-bike-map-cartocss-style.git \
  && cd world-bike-map-cartocss-style \
+ && sed -i 's/, "unifont Medium", "Unifont Upper Medium"//g' style/fonts.mss \
+ && sed -i 's/"Noto Sans Tibetan Regular",//g' style/fonts.mss \
+ && sed -i 's/"Noto Sans Tibetan Bold",//g' style/fonts.mss \
+ && sed -i 's/Noto Sans Syriac Eastern Regular/Noto Sans Syriac Regular/g' style/fonts.mss \
  && cp views.sql / \
  && rm -rf .git \
  && echo 'INFO: Installing carto' \
@@ -201,7 +163,9 @@ RUN mkdir -p /home/renderer/src \
  && chmod u+x /home/renderer/src/regional/trim_osc.py
 
 # Start running
+COPY ./scripts/render_list_geo.pl /
 COPY indexes.sql /
-COPY scripts/run.sh /run.sh
+COPY scripts/run.sh /
 ENTRYPOINT ["/run.sh"]
 CMD []
+EXPOSE 80
