@@ -55,5 +55,5 @@ while true; do
     sleep 1 
 done
 
-echo "invalid command"
+echo "ERROR: Invalid command"
 exit 1
