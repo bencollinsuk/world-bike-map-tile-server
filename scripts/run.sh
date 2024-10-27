@@ -2,23 +2,24 @@
 
 set -euo pipefail
 
-# if [ "$#" -ne 1 ]; then
-#     echo "usage: <import|run>"
-#     echo "commands:"
-#     echo "    import: Set up the database and import /data/region.osm.pbf"
-#     echo "    run: Runs Apache and renderd to serve tiles at /tile/{z}/{x}/{y}.png"
-#     echo "environment variables:"
-#     echo "    THREADS: defines number of threads used for importing / tile rendering"
-#     echo "    UPDATES: consecutive updates (enabled/disabled)"
-#     echo "    NAME_LUA: name of .lua script to run as part of the style"
-#     echo "    NAME_STYLE: name of the .style to use"
-#     echo "    NAME_MML: name of the .mml file to render to mapnik.xml"
-#     echo "    NAME_SQL: name of the .sql file to use"
-#     exit 1
-# fi
+if [ "$#" -ne 1 ]; then
+    echo "usage: <import|run>"
+    echo "commands:"
+    echo "    import: Set up the database and import /data/region.osm.pbf"
+    echo "    run: Runs Apache and renderd to serve tiles at /tile/{z}/{x}/{y}.png"
+    echo "environment variables:"
+    echo "    THREADS: defines number of threads used for importing / tile rendering"
+    echo "    UPDATES: consecutive updates (enabled/disabled)"
+    echo "    NAME_LUA: name of .lua script to run as part of the style"
+    echo "    NAME_STYLE: name of the .style to use"
+    echo "    NAME_MML: name of the .mml file to render to mapnik.xml"
+    echo "    NAME_SQL: name of the .sql file to use"
+    exit 1
+fi
 
 # set -x
 
+echo "INFO: Running carto"
 mkdir -p /home/renderer/src \
  && cd /home/renderer/src \
  && cd world-bike-map-cartocss-style \
@@ -38,21 +39,15 @@ sudo cat /home/renderer/.pgpass
 # RESULT=$(echo "$RESULT" | xargs)
 PGPASSWORD=$PGPASSWORD
 
-if ! psql -h $PGHOST -U $PGUSER -d gis -c 'SELECT ST_SRID("way") FROM planet_osm_polygon limit 1'; then
+# if ! psql -h $PGHOST -U $PGUSER -d gis -c 'SELECT ST_SRID("way") FROM planet_osm_polygon limit 1'; then
+if [ "$1" == "import" ]; then
 
     if [ ! -f /osm-data/data.osm.pbf ] && [ -z "$DOWNLOAD_PBF" ]; then
         echo "ERROR: No import file"
         exit 1
     fi
- 
-    echo "INFO: Running carto"
-    mkdir -p /home/renderer/src \
-    && cd /home/renderer/src \
-    && cd world-bike-map-cartocss-style \
-    && sed -i 's/dbname: "osm"/dbname: "gis"/g' project.mml \
-    && sed -i "s/database_host/$PGHOST/g" project.mml \
-    && carto project.mml > mapnik.xml \
-    && cd /
+
+    echo "INFO: Importing data..."
 
     if [ -n "${DOWNLOAD_PBF:-}" ]; then
         echo "INFO: Download PBF file: $DOWNLOAD_PBF"
@@ -129,54 +124,28 @@ if ! psql -h $PGHOST -U $PGUSER -d gis -c 'SELECT ST_SRID("way") FROM planet_osm
 
     trap stop_handler SIGTERM
 
-    echo "Starting renderd with render_list using ${THREADS:-4} threads..."
+    echo "INFO: Starting renderd with render_list using ${THREADS:-4} threads..."
 
     sudo -u renderer renderd -c /etc/renderd.conf && 
     # render_list --help
 
-    # Define the UK bounding box in latitude and longitude
-    west=-10.8545
-    south=49.8634
-    east=1.7620
-    north=60.8606
-
-    # Define zoom range
-    min_zoom=0
-    max_zoom=${MAX_ZOOM:-15}
-
-    # Function to convert lat/lon to tile coordinates
-    latlon_to_tile() {
-        local lat=$1
-        local lon=$2
-        local zoom=$3
-
-        # Calculate x and y tile numbers using Web Mercator projection
-        local x=$(echo "($lon + 180) / 360 * (2 ^ $zoom)" | bc -l)
-        local sin_lat=$(echo "s($lat * 4 * a(1) / 180)" | bc -l)
-        local y=$(echo "(1 - l((1 + $sin_lat) / (1 - $sin_lat)) / (4 * a(1))) / 2 * (2 ^ $zoom)" | bc -l)
-
-        # Convert to integer values
-        x=$(printf "%.0f" "$x")
-        y=$(printf "%.0f" "$y")
-        echo "$x $y"
-    }
-
     # Loop through each zoom level
-    for zoom in $(seq $min_zoom $max_zoom); do
-        # Calculate tile coordinates for the bounding box
-        read min_x min_y <<< $(latlon_to_tile $north $west $zoom)
-        read max_x max_y <<< $(latlon_to_tile $south $east $zoom)
+    for zoom in $(seq 0 $MAX_ZOOM); do
         
         # Render tiles for the calculated tile range at the current zoom level
         echo "INFO: Rendering zoom level $zoom..."
-        render_list -v -n ${THREADS:-4} -a -z $zoom -Z $zoom -x $min_x -y $min_y -X $max_x -Y $max_y
+        perl /render_list_geo.pl -m default -t /var/lib/mod_tile/ -n ${THREADS:-4} -z $zoom -Z $zoom -x -10.8545 -X 1.7620 -y 49.8634 -Y 60.8606
+        # render_list -v -n ${THREADS:-4} -a -z $zoom -Z $zoom -x $min_x -y $min_y -X $max_x -Y $max_y
     done
 
 fi
 
-# if [ "$1" == "run" ]; then
+if [ "$1" == "server" ]; then
+    echo "INFO: Starting Apache..."
     # Clean /tmp
     rm -rf /tmp/*
+
+# if ! psql -h $PGHOST -U $PGUSER -d gis -c 'SELECT ST_SRID("way") FROM planet_osm_polygon limit 1'; then
 
     echo "INFO: Waiting for PostgreSQL to be ready..."
     until PGPASSWORD=$PGPASSWORD psql -h $PGHOST -U $PGUSER -d gis -c 'SELECT ST_SRID("way") FROM planet_osm_polygon limit 1'; do
@@ -185,7 +154,6 @@ fi
     done
 
     echo "INFO: PostgreSQL is ready"
-
 
     # # migrate old files
     # if [ -f /data/database/PG_VERSION ] && ! [ -d /data/database/postgres/ ]; then
@@ -253,7 +221,7 @@ fi
 
     sleep 2
 
-    echo "Starting renderd"
+    echo "INFO: Starting renderd"
     cat /etc/renderd.conf
     PGPASSWORD=$PGPASSWORD
     sudo -u renderer renderd -f -c /etc/renderd.conf &
@@ -262,7 +230,7 @@ fi
     wait "$child"
 
     exit 0
-# fi
+fi
 
-echo "invalid command"
+echo "ERROR: Invalid command"
 exit 1

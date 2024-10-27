@@ -21,7 +21,9 @@ services:
           memory: 2G
     ports:
       - "5432:5432"
-  server:
+
+  import:
+    command: ["import"]
     build:
       context: .
       dockerfile: Dockerfile
@@ -47,6 +49,36 @@ services:
         reservations:
           cpus: '12'
           memory: 2G
+  server:
+    command: ["server"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: world-bike-map-tile-server
+    depends_on:
+      - db
+    volumes:
+      - osm-data:/osm-data
+      - osm-tiles:/var/lib/mod_tile
+    environment:
+      - PGHOST=${PGHOST}
+      - PGUSER=${PGUSER}
+      - PGPASSWORD=${PGPASSWORD}
+      - THREADS=8
+      - OSM2PGSQL_EXTRA_ARGS=-C 8192
+      - DOWNLOAD_PBF=https://download.geofabrik.de/europe/isle-of-man-latest.osm.pbf
+      - WGET_ARGS=--quiet
+      - DOWNLOAD_POLY=
+      - MAX_ZOOM=15
+      - ALLOW_CORS=1
+    deploy:
+      resources:
+        reservations:
+          cpus: '12'
+          memory: 2G
+    ports:
+      - "8080:80"
+
 volumes:
   osm-tiles:
   osm-data:
