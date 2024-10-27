@@ -23,7 +23,7 @@ services:
       - "5432:5432"
 
   import:
-    command: ["import"]
+    command: ["/bin/sh", "-c", "/wait-for-it.sh db:5432 -t 0 && /import.sh"]
     build:
       context: .
       dockerfile: Dockerfile
@@ -33,6 +33,7 @@ services:
     volumes:
       - osm-data:/osm-data
       - osm-tiles:/var/lib/mod_tile
+      - import-status:/import-status
     environment:
       - PGHOST=${PGHOST}
       - PGUSER=${PGUSER}
@@ -49,8 +50,9 @@ services:
         reservations:
           cpus: '12'
           memory: 2G
+
   server:
-    command: ["server"]
+    command: ["/bin/sh", "-c", "/wait-for-it.sh db:5432 -t 0 && ls -l /import-status && /wait-for-file.sh /import-status/ready -t 0 && /server.sh"]
     build:
       context: .
       dockerfile: Dockerfile
@@ -60,6 +62,7 @@ services:
     volumes:
       - osm-data:/osm-data
       - osm-tiles:/var/lib/mod_tile
+      - import-status:/import-status
     environment:
       - PGHOST=${PGHOST}
       - PGUSER=${PGUSER}
@@ -82,3 +85,4 @@ services:
 volumes:
   osm-tiles:
   osm-data:
+  import-status:

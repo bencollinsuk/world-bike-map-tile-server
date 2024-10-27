@@ -3,7 +3,8 @@
 
 docker volume create osm-data
 docker volume create osm-tiles
-docker compose up server -d --build
+docker compose build
+docker compose up -d
 
 # Wait for localhost:8080 to be available
 while ! curl -s http://localhost:8080 > /dev/null; do

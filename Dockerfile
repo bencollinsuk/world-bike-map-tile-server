@@ -165,7 +165,9 @@ RUN mkdir -p /home/renderer/src \
 # Start running
 COPY ./scripts/render_list_geo.pl /
 COPY indexes.sql /
-COPY scripts/run.sh /
-ENTRYPOINT ["/run.sh"]
-CMD []
+COPY scripts/server.sh /
+COPY scripts/import.sh /
+COPY wait-for-it.sh /
+COPY wait-for-file.sh /
+CMD ["run.sh"]
 EXPOSE 80
